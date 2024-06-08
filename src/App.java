@@ -3,26 +3,35 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.regex.*;
+import java.io.*;
 
 class CouponMeal {
     private String price;
     private String code;
     private String food_img_url;
+    private String[] items;
+    private String items_str;
 
     public void CouponMeal() {
         price = "";
         code = "";
         food_img_url = "";
+        items = null;
+        items_str = "";
     }
 
-    public void setupMeal(String url, String img_url) throws Exception {
-        Document doc = Jsoup.connect(url).get();
+    public void setupMeal(String url, String img_url) {
+        Document doc = null;
+        try {
+            doc = Jsoup.connect(url).get();
+        } catch (IOException e) {
+            System.out.println("fail to connect to coupon url.");
+        }
 
         Element price = doc.selectFirst("span.small-price");
-        this.price = price.text().substring(1);
+        this.price = price.text().substring(1).replaceAll(",", "");
 
         Element code = doc.selectFirst("h1.combo-flow__header-title.mealsTitle");
         this.code = code.text().replaceAll("[^0-9]", "");
@@ -30,9 +39,51 @@ class CouponMeal {
         this.food_img_url = img_url;
     }
 
+    public void setItems(String text) {
+        this.items = text.split(",");
+        this.items_str = text;
+    }
+
+    public String[] getItems() {
+        return items;
+    }
+
+    public String getPrice() {
+        return price;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public String getFood_img_url() {
+        return food_img_url;
+    }
+
     public String toString() {
-        String str = "[code: " + code + ", price: " + price + ", image url: " + food_img_url + "]\n";
+        String str = "[ code: " + code + ", price: " + price + ", image url: " + food_img_url + " ]\n" + "[" + items_str
+                + "]\n";
         return str;
+    }
+
+    public static void setupContents(Map<String, CouponMeal> map) {
+        try {
+            BufferedReader br = new BufferedReader(
+                    new InputStreamReader(new FileInputStream("data/meals.csv"), "UTF-8"));
+            String line;
+            while ((line = br.readLine()) != null) {
+                map.get(line.substring(0, 5)).setItems(line.substring(6, line.length()));
+            }
+            br.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void printMeals(List<CouponMeal> meals) {
+        for (CouponMeal meal : meals) {
+            System.out.println(meal.toString());
+        }
     }
 }
 
@@ -73,6 +124,7 @@ class CouponMealLinkConstructor {
         }
         return null;
     }
+
 }
 
 public class App {
@@ -82,16 +134,19 @@ public class App {
 
         List<CouponMeal> meals = new ArrayList<>();
 
+        Map<String, CouponMeal> map = new HashMap<>();
+
         for (String meal_url_img : meal_urls_and_imgs) {
             // produce all coupon Meal instances
             CouponMeal meal = new CouponMeal();
             String[] str = meal_url_img.split(",");
             meal.setupMeal(str[0], str[1]);
             meals.add(meal);
+            map.put(meal.getCode(), meal);
         }
 
-        for (CouponMeal meal : meals) {
-            System.out.println(meal);
-        }
+        CouponMeal.setupContents(map);
+
+        CouponMeal.printMeals(meals);
     }
 }
