@@ -72,7 +72,12 @@ class CouponMeal {
                     new InputStreamReader(new FileInputStream("data/meals.csv"), "UTF-8"));
             String line;
             while ((line = br.readLine()) != null) {
-                map.get(line.substring(0, 5)).setItems(line.substring(6, line.length()));
+                String code = line.substring(0, 5);
+                CouponMeal m = map.get(code);
+                if (m == null) {
+                    continue;
+                }
+                m.setItems(line.substring(6, line.length()));
             }
             br.close();
         } catch (IOException e) {
